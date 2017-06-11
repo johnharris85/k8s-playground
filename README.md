@@ -1,6 +1,6 @@
 # Kubernetes Playground
 This project contains a `Vagrantfile` and associated `Ansible` playbook scripts
-to provisioning a 3 nodes Kubernetes cluster using `VirtualBox` and `Ubuntu
+to provisioning a 3 (default) or 5 (export NUM_K8S_NODES=5) node Kubernetes cluster using `VirtualBox` and `Ubuntu
 16.04`.
 
 ### Prerequisites
@@ -15,7 +15,7 @@ as installs Ubuntu application packages from the Internet.
 To bring up the cluster, clone this repository to a working directory.
 
 ```
-git clone http://github.com/davidkbainbridge/k8s-playground
+git clone http://github.com/johnharris85/k8s-playground
 ```
 
 Change into the working directory and `vagrant up`
@@ -25,7 +25,7 @@ cd k8s-playground
 vagrant up
 ```
 
-Vagrant will start three machines. Each machine will have a NAT-ed network
+Vagrant will start 3 or 5 machines. Each machine will have a NAT-ed network
 interface, through which it can access the Internet, and a `private-network`
 interface in the subnet 172.42.42.0/24. The private network is used for
 intra-cluster communication.
@@ -37,6 +37,8 @@ The machines created are:
 | k8s1 | 172.42.42.1 | Cluster Master |
 | k8s2 | 172.42.42.2 | Cluster Worker |
 | k8s3 | 172.42.42.3 | Cluster Worker |
+| k8s4 | 172.42.42.4 | Cluster Worker | (optional)
+| k8s5 | 172.42.42.5 | Cluster Worker | (optional)
 
 As the cluster brought up the cluster master (**k8s1**) will perform a `kubeadm
 init` and the cluster workers will perform a `kubeadmin join`. This cluster is
@@ -336,6 +338,9 @@ vagrant ssh k8s1
 kubectl delete po hello-client
 kubectl run hello-client --image=hello-client --image-pull-policy=Never --restart=Never
 ```
+
+### Credit / Extension
+This repo is forked from davidkbainbridge/k8s-playground, 99% of the initial work is his. I added the ability to run 5 machines. Also I couldn't connect to any of the local VMs with the private inet set in the vagrantfile, so have removed this (seems to work fine now, YMMV).
 
 ### Clean Up
 On each vagrant machine is installed a utility as `/usr/local/bin/clean-k8s`.
