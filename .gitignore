@@ -2,3 +2,4 @@ admin.conf
 .vagrant
 *.retry
 *.log
+*.tar
