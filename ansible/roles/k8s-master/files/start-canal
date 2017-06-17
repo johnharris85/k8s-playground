@@ -1,3 +1,5 @@
 #!/bin/bash
 
-kubectl create -f https://raw.githubusercontent.com/tigera/canal/master/k8s-install/kubeadm/canal.yaml
+kubectl apply -f https://raw.githubusercontent.com/projectcalico/canal/master/k8s-install/1.6/rbac.yaml
+
+kubectl apply -f https://raw.githubusercontent.com/projectcalico/canal/master/k8s-install/1.6/canal.yaml
