@@ -1,6 +1,6 @@
 # Kubernetes Playground
 This project contains a `Vagrantfile` and associated `Ansible` playbook scripts
-to provisioning a 3 (default) or 5 (export NUM_K8S_NODES=5) node Kubernetes cluster using `VirtualBox` and `Ubuntu
+to provisioning a 3 node Kubernetes cluster using `VirtualBox` and `Ubuntu
 16.04`.
 
 ### Prerequisites
@@ -25,7 +25,7 @@ cd k8s-playground
 vagrant up
 ```
 
-Vagrant will start 3 or 5 machines. Each machine will have a NAT-ed network
+Vagrant will start 3 machines. Each machine will have a NAT-ed network
 interface, through which it can access the Internet, and a `private-network`
 interface in the subnet 172.42.42.0/24. The private network is used for
 intra-cluster communication.
@@ -37,8 +37,6 @@ The machines created are:
 | k8s1 | 172.42.42.1 | Cluster Master |
 | k8s2 | 172.42.42.2 | Cluster Worker |
 | k8s3 | 172.42.42.3 | Cluster Worker |
-| k8s4 | 172.42.42.4 | Cluster Worker | (optional)
-| k8s5 | 172.42.42.5 | Cluster Worker | (optional)
 
 As the cluster brought up the cluster master (**k8s1**) will perform a `kubeadm
 init` and the cluster workers will perform a `kubeadmin join`. This cluster is
@@ -98,249 +96,8 @@ weave-net-3z7jj                  2/2       Running   0          3m        172.42
 weave-net-uvv48                  2/2       Running   0          3m        172.42.42.3   k8s3
 ```
 
-### Starting A Sample Service / Deployment
-Included in the *git* repository is a sample *service* and *deployment*
-specification that work with Kubernetes. These can be found on the master node
-(**k8s1**) as `/vagrant/service.yml` and `/vagrant/deployment.yml`.
-
-These descriptors will create a *hello-service* sample service using a simple
-docker image `davidkbainbridge/docker-hello-world`. This image is a simple
-HTTP service that outputs the the hostname and the IP address information on
-which the request was processed. An example output is:
-
-```
-Hello, "/"
-HOST: hello-deployment-2911225940-qhfn2
-ADDRESSES:
-    127.0.0.1/8
-    10.40.0.5/12
-    ::1/128
-    fe80::dcc9:4ff:fe5c:f793/64
-```
-
-To start the *service* and *deployment* you can issue the following command
-on the master node (**k8s1**):
-
-```
-kubectl create -f /vagrant/service.yml -f /vagrant/deployment.yml
-```
-
-After issuing the `create` command you should be able to see the *service* and
-*deployment* using the following commands.
-
-```
-ubuntu@k8s1:~$ kubectl get service
-NAME            CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
-hello-service   100.76.247.60   <none>        80/TCP    6s
-kubernetes      100.64.0.1      <none>        443/TCP   36m
-```
-
-```
-ubuntu@k8s1:~$ kubectl get deployment
-NAME               DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
-hello-deployment   3         3         3            0           12s
-```
-*After the sample service container is pulled from dockerhub and started the
-available count should go to the value `3`*.
-
-### Fetching the Cluster DNS server
-Kubernetes includes a DNS server through which service IPs and ports can be
-queried. The IP address of the DNS service can be seen using the following
-command:
-
-```
-kubectl -n kube-system get svc -l k8s-app=kube-dns -o json | jq -r '.items[].spec.clusterIP'
-```
-
-The IP address of the DNS server will be used in some of the following commands,
-such as `dig` in for form `@a.b.c.d`. Please substitute the IP address returned
-about into this commands.
-
-### Accessing the Service
-Kubernetes creates a SRV record in its DNS server for the service that was
-defined in the `service.yml` file. Looking at this file you can see that a
-service named `http` was defined. This information can be queried from DNS
-use the following command:
-```
-ubuntu@k8s1:~$ dig +short  @a.b.c.d _http._tcp.hello-service.default.svc.cluster.local SRV
-10 100 80 hello-service.default.svc.cluster.local.
-```
-
-The information returned form this query is of the form:
-```
-<priority> <weight> <port> <target>
-```
-
-Using a query recursively on this information, specifically the `target` the
-IP address for the service can be retrieved.
-```
-ubuntu@k8s1:~$ dig +short  @a.b.c.d hello-service.default.svc.cluster.local.
-100.76.247.60
-```
-
-Thus using DNS a client can dynamically determine the IP address and the port
-on which to connect to a service. To test the service the following command
-can be used on any node in the cluster:
-```
-curl -sSL http://$(dig +short @a.b.c.d $(dig +short  @a.b.c.d \
-     _http._tcp.hello-service.default.svc.cluster.local SRV | cut '-d ' -f4)):\
-     $(dig +short @a.b.c.d _http._tcp.hello-service.default.svc.cluster.local SRV | cut '-d ' -f3)
-```
-
-A script has been provided to simplify this tasks and returns the host IP and the
-port given a DNS server and service. Thus the same results can be acheived in
-the playground with the following command:
-```
-curl -sSL http://$(/vagrant/kube-target _http._tcp.hello-service.default.svc.cluster.local)
-```
-
-The IP address for the service can also be seen via the `kubectl get service`
-command.
-
-The IP address returned in every enivornment may be differet.
-
-To test the service you can use the following command on any node in the
-cluster:
-
-```
-ubuntu@k8s1:~$ curl -sSL http://$(/vagrant/kube-target _http._tcp.hello-service.default.svc.cluster.local)
-Hello, "/"
-HOST: hello-deployment-2911225940-b3tyn
-ADDRESSES:
-    127.0.0.1/8
-    10.32.0.2/12
-    ::1/128
-    fe80::e89f:bfff:fec2:b67a/64
-```
-
-### Scaling the Service
-To test the scaling of the service, you can open a second terminal and ssh
-to a node in the cluster (e.g. `vagrant up ssh k8s1`). In this terminal if you
-issue the following command it will periodically issue a `curl` request to
-the service and display the output, highlighting the difference from the
-previous request. This demonstates that the request is being handled by
-different services.
-
-```
-watch -d curl -sSL http://$(/vagrant/kube-target  _http._tcp.hello-service.default.svc.cluster.local)
-```
-
-Currently there should be 3 instances of the service implementation being
-used. To scale to a single instance, issue the following command:
-
-```
-ubuntu@k8s1:~$ kubectl scale deployment hello-deployment --replicas=1
-deployment "hello-deployment" scaled
-```
-
-After scaling to a single instance the `watch` command from above should show
-no differences between successive request as all requests are being handled by
-the same instance.
-
-The following command scales the number of instances to 5 and after issuing
-this command differences in the `watch` command should be highlighted.
-
-```
-ubuntu@k8s1:~$ kubectl scale deployment hello-deployment --replicas=5
-deployment "hello-deployment" scaled
-```
-
-### Service Health Check
-The test container image used above `davidkbainbridge/docker-hello-world:latest`
-is built with a health check capability. The container provides a REST end
-point that will return `200 Ok` by default, but this can be manual set to a
-different value to test error cases. See the container documentation
-at https://github.com/davidkbainbridge/docker-hello-world for more information.
-
-To see the health of any given instance of the service implementation, you can
-`ssh` to the k8s1 and perform a `kubectl get po -o wide`. This will show the
-pods augmented with the number of restarts.
-
-```
-ubuntu@k8s1:~$ kubectl get po -o wide
-NAME                                READY     STATUS    RESTARTS   AGE       IP          NODE
-hello-deployment-3696513547-fhh2y   1/1       Running   0          12s       10.40.0.1   k8s2
-hello-deployment-3696513547-ocgas   1/1       Running   0          12s       10.38.0.2   k8s3
-hello-deployment-3696513547-y257u   1/1       Running   0          12s       10.38.0.1   k8s3
-```
-
-To demonstrate the health check capability of the cluster, you can open up a
-`ssh` session to k8s1 and run `watch -d kubectl get po -o wide`. This command
-will periodically update the screen with information about the pods including
-the number of restarts.
-
-To cause one of the container instances to start reporting a failed health
-value you can set a random instance to fail using
-
-```
-curl -XPOST -sSL http://$(/vagrant/kube-target  _http._tcp.hello-service.default.svc.cluster.local)/health -d '{"status":501}'
-```
-
-This will set the health check on a random instance in the cluster to return
-"501 Internal Server Error". If you want to fail the health check on a specific
-instance you will nee to make a similar `curl` request to the specific
-container instance.
-
-After setting the health check to return a failure value monitor the
-`kubectl get po -o wide` command. After about 30 seconds one of the pod
-restarts counts should be incremented. This represented Kubernetes killing and
-restarting a pod because of a failed health check.
-
-*NOTE: the frequency of health checks is configurable*
-
-### Example client
-Included in the repo is an example client written in the Go language that
-demonstrates how a container can directly look up another service and call
-that service.
-
-To test this client use the following steps:
-
-| COMMAND | DESCRIPTION |
-| --- | --- |
-| `vagrant ssh k8s1` | Logon to the k8s1 host |
-| `cd /vagrant/examples/client/go` | Move to the example directory |
-| `sudo apt-get -y install make` | Install the `make` command |
-| `make prep` | Enables deployment of pods to the master node, `k8s1` |
-| `make image` | Builds the sample client Docker image |
-| `make run` | Runs the sample client as a run-once pod |
-| `make logs` | Displays the logs for the client pod |
-| `make clean` | Deletes the sample client pod |
-
-The output of the `make logs` step should display a similar output as the `curl`
-statement above.
-
-```
-ubuntu@k8s1:/vagrant/examples/client/go$ make logs
-kubectl logs hello-client
-Hello, "/"
-HOST: hello-deployment-1725651635-u8f65
-ADDRESSES:
-    127.0.0.1/8
-    10.40.0.1/12
-    ::1/128
-    fe80::bcdc:21ff:fecd:83db/64
-```
-
-The above example forces the deployment of the sample client to the k8s1 node
-for simplicity. If you would like to have the client deployed to any of the
-nodes in the cluster you need to `ssh` to each node in the cluster and
-
-```
-cd /vagrant/examples/client/go
-sudo apt-get install -y make
-make image
-```
-
-The run the sample client use the following commands
-
-```
-vagrant ssh k8s1
-kubectl delete po hello-client
-kubectl run hello-client --image=hello-client --image-pull-policy=Never --restart=Never
-```
-
 ### Credit / Extension
-This repo is forked from davidkbainbridge/k8s-playground, 99% of the initial work is his. I added the ability to run 5 machines. Also I couldn't connect to any of the local VMs with the private inet set in the vagrantfile, so have removed this (seems to work fine now, YMMV).
+This repo is forked from davidkbainbridge/k8s-playground, 99% of the initial work is his but I've added some bits and pieces and modified a few things for my requirements. Also I couldn't connect to any of the local VMs with the private inet set in the vagrantfile, so have removed this (seems to work fine now, YMMV).
 
 ### Clean Up
 On each vagrant machine is installed a utility as `/usr/local/bin/clean-k8s`.

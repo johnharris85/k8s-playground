@@ -1,11 +1,9 @@
 # -*- mode: ruby -*-
 # # vi: set ft=ruby :
 
-$nodes = ENV['NUM_K8S_NODES'].to_i != 0 ? ENV['NUM_K8S_NODES'].to_i : 3
-
 Vagrant.configure(2) do |config|
 
-  (1..$nodes).each do |i|
+  (1..3).each do |i|
     config.vm.define "k8s#{i}" do |s|
       s.ssh.forward_agent = true
       s.vm.box = "ubuntu/xenial64"
