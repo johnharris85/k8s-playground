@@ -2,11 +2,16 @@
 - name: Ensure NFS data directory
   become: yes
   file:
-    path: /data
+    path: "{{ item }}"
     state: directory
     owner: nobody
     group: nogroup
     mode: 0700
+  with_items:
+    - /data
+    - /nfs/test-volume1
+    - /nfs/test-volume2
+    - /nfs/test-volume3
 
 - name: Ensure NFS utilities are installed.
   become: yes

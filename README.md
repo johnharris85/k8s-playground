@@ -9,6 +9,8 @@ The machines are all assigned 2GB of RAM and a static IP (as defined in the `Vag
 You need the following installed to use this playground.
 - `Vagrant`, version 1.9.3 or better. Earlier versions of vagrant do not work
 with the Vagrant Ubuntu 16.04 box and network configuration.
+        
+    - You may also want to install the `vagrant-cachier` plugin, which will speed up package installation by caching `apt`. You can install the plugin by running `$ vagrant plugin install vagrant-cachier`.
 - `VirtualBox`, tested with Version 5.1.18 r114002
 - Internet access, this playground pulls Vagrant boxes from the Internet as well
 as installs Ubuntu application packages from the Internet.
@@ -102,10 +104,20 @@ weave-net-3z7jj                  2/2       Running   0          3m        172.42
 weave-net-uvv48                  2/2       Running   0          3m        172.42.42.3   k8s3
 ```
 
-### Credit / Extension
-This repo is forked from davidkbainbridge/k8s-playground, 99% of the initial work is his but I've added some bits and pieces and modified a few things for my requirements. Also I couldn't connect to any of the local VMs with the private inet set in the vagrantfile, so have removed this (seems to work fine now, YMMV).
+### Persistent Storage (NFS)
+There is an NFS server which is brought up as part of the cluster, to enable users to play around with persistent storage. The paths exposed to the cluster are:
+
+```
+/data
+/nfs/test-volume1
+/nfs/test-volume2
+/nfs/test-volume3
+```
 
 ### Clean Up
 On each vagrant machine is installed a utility as `/usr/local/bin/clean-k8s`.
 executing this script as `sudo` will reset the servers back to a point where
 you can execute vagrant provisioning.
+
+### Credit / Extension
+This repo is forked from davidkbainbridge/k8s-playground, 90% of the initial work is his but I've added some bits and pieces and modified a few things. Also I couldn't connect to any of the local VMs with the private inet set in the vagrantfile, so have removed this (seems to work fine now, YMMV).
