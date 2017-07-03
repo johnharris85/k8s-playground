@@ -1,6 +1,6 @@
 # Kubernetes Playground
 This project contains a `Vagrantfile` and associated `Ansible` playbook scripts
-to provisioning a 3 node Kubernetes cluster using `VirtualBox` and `Ubuntu
+to provision a 3 node Kubernetes cluster using `VirtualBox` and `Ubuntu
 16.04`.
 
 ### Prerequisites
@@ -15,17 +15,17 @@ as installs Ubuntu application packages from the Internet.
 To bring up the cluster, clone this repository to a working directory.
 
 ```
-git clone http://github.com/johnharris85/k8s-playground
+$ git clone http://github.com/johnharris85/k8s-playground
 ```
 
 Change into the working directory and `vagrant up`
 
 ```
-cd k8s-playground
-vagrant up
+$ cd k8s-playground
+$ vagrant up
 ```
 
-Vagrant will start 3 machines. Each machine will have a NAT-ed network
+Vagrant will start 4 machines. Each machine will have a NAT-ed network
 interface, through which it can access the Internet, and a `private-network`
 interface in the subnet 172.42.42.0/24. The private network is used for
 intra-cluster communication.
@@ -34,9 +34,10 @@ The machines created are:
 
 | NAME | IP ADDRESS | ROLE |
 | --- | --- | --- |
-| k8s1 | 172.42.42.1 | Cluster Master |
-| k8s2 | 172.42.42.2 | Cluster Worker |
-| k8s3 | 172.42.42.3 | Cluster Worker |
+| k8s1 | 172.42.42.101 | Cluster Master |
+| k8s2 | 172.42.42.102 | Cluster Worker |
+| k8s3 | 172.42.42.103 | Cluster Worker |
+| nfs  | 172.42.42.200 | NFS Server     |
 
 As the cluster brought up the cluster master (**k8s1**) will perform a `kubeadm
 init` and the cluster workers will perform a `kubeadmin join`. This cluster is
@@ -46,9 +47,7 @@ After the `vagrant up` is complete, the following command and output should be
 visible on the cluster master (**k8s1**).
 
 ```
-vagrant ssh k8s1
-kubectl -n kube-system get po -o wide
-
+$ kubectl -n kube-system get po -o wide
 NAME                             READY     STATUS              RESTARTS   AGE       IP            NODE
 etcd-k8s1                        1/1       Running             0          10m       172.42.42.1   k8s1
 kube-apiserver-k8s1              1/1       Running             1          10m       172.42.42.1   k8s1
@@ -67,19 +66,19 @@ after the `vagrant up` is complete. A script to start the networking is
 installed on the cluster master (**k8s1**) as `/usr/local/bin/start-weave`.
 
 ```
-vagrant ssh k8s1
-ubuntu@k8s1:~$ start-weave
+$ vagrant ssh k8s1 
+$ /usr/local/bin/start-weave
 clusterrole "weave-net" created
 serviceaccount "weave-net" created
 clusterrolebinding "weave-net" created
 daemonset "weave-net" created
+$ exit
 ```
 
 After the network is started, assuming `weave-net` is used, the following
 command and output should be visible on the master node (**k8s1**):
 
 ```
-vagrant ssh k8s1
 $ kubectl -n kube-system get po -o wide
 NAME                             READY     STATUS    RESTARTS   AGE       IP            NODE
 etcd-k8s1                        1/1       Running   0          14m       172.42.42.1   k8s1

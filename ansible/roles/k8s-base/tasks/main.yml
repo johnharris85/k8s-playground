@@ -85,9 +85,9 @@
 
 - name: Ensure User in Docker Group
   user:
-    name=ubuntu
-    groups=docker
-    append=yes
+    name: ubuntu
+    groups: docker
+    append: yes
 
 - name: Ensure Kubernetes Cleanup
   become:
@@ -97,3 +97,9 @@
     mode: 0755
     owner: root
     group: root
+
+- name: Ensure NFS client packages
+  become: yes
+  apt:
+    name: "nfs-common"
+    state: latest

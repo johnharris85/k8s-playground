@@ -1,0 +1,31 @@
+---
+- name: Ensure NFS data directory
+  become: yes
+  file:
+    path: /data
+    state: directory
+    owner: nobody
+    group: nogroup
+    mode: 0700
+
+- name: Ensure NFS utilities are installed.
+  become: yes
+  apt: 
+    name: "{{ item }}"
+    state: latest 
+    update_cache: yes
+  with_items:
+    - nfs-common
+    - nfs-kernel-server
+
+- name: Copy /etc/exports
+  template: 
+    src: exports.j2
+    dest: /etc/exports
+    owner: root
+    group: root
+
+- name: restart nfs server
+  service:
+    name: nfs-kernel-server
+    state: restarted
