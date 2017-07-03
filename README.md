@@ -3,6 +3,8 @@ This project contains a `Vagrantfile` and associated `Ansible` playbook scripts
 to provision a 3 node Kubernetes cluster using `VirtualBox` and `Ubuntu
 16.04`.
 
+The machines are all assigned 2GB of RAM and a static IP (as defined in the `Vagrantfile`). If this doesn't work on your environment (due to resource constraints / network clashes then edit the `Vagrantfile`).
+
 ### Prerequisites
 You need the following installed to use this playground.
 - `Vagrant`, version 1.9.3 or better. Earlier versions of vagrant do not work
@@ -43,8 +45,13 @@ As the cluster brought up the cluster master (**k8s1**) will perform a `kubeadm
 init` and the cluster workers will perform a `kubeadmin join`. This cluster is
 using a static Kubernetes cluster token.
 
-After the `vagrant up` is complete, the following command and output should be
-visible on the cluster master (**k8s1**).
+If you would like to add entries to the hosts file for each node, run the included helper script:
+
+```
+$ sudo ./scripts/update_hosts.sh
+```
+
+After the `vagrant up` is complete, run `$ export KUBECONFIG=admin.conf` then execute the command below to check everything is working.
 
 ```
 $ kubectl -n kube-system get po -o wide
